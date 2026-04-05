@@ -103,6 +103,16 @@ export async function authRegister(email: string, password: string, name: string
   return response.json();
 }
 
+export async function authGoogleLogin(idToken: string) {
+  const response = await fetch(`${API_BASE}/auth`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "google", idToken }),
+  });
+  if (!response.ok) { const err = await response.json(); throw new Error(err.error || "Google login failed"); }
+  return response.json();
+}
+
 export async function authGetMe() {
   const response = await fetch(`${API_BASE}/auth`, { headers: getAuthHeaders() });
   if (!response.ok) throw new Error("Not authenticated");

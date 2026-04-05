@@ -6,7 +6,8 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { authLogin, authRegister, authGetMe } from "../utils/api";
+import { authLogin, authRegister, authGoogleLogin, authGetMe } from "../utils/api";
+import { signInWithGoogle } from "../lib/firebase";
 
 interface User {
   id: string;
@@ -22,6 +23,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   error: string | null;
   clearError: () => void;
@@ -55,8 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(TOKEN_KEY, data.token);
       setUser(data.user);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Login failed";
-      setError(msg);
+      setError(err instanceof Error ? err.message : "Login failed");
       throw err;
     }
   }, []);
@@ -68,8 +69,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(TOKEN_KEY, data.token);
       setUser(data.user);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Registration failed";
-      setError(msg);
+      setError(err instanceof Error ? err.message : "Registration failed");
+      throw err;
+    }
+  }, []);
+
+  const loginWithGoogle = useCallback(async () => {
+    setError(null);
+    try {
+      // 1. Firebase handles the Google popup
+      const firebaseResult = await signInWithGoogle();
+      // 2. Send the Firebase ID token to our backend
+      const data = await authGoogleLogin(firebaseResult.idToken);
+      localStorage.setItem(TOKEN_KEY, data.token);
+      setUser(data.user);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Google sign-in failed";
+      // Don't show error if user simply closed the popup
+      if (!msg.includes("popup-closed-by-user") && !msg.includes("cancelled")) {
+        setError(msg);
+      }
       throw err;
     }
   }, []);
@@ -89,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         login,
         register,
+        loginWithGoogle,
         logout,
         error,
         clearError,
