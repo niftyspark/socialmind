@@ -148,9 +148,51 @@
   -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
+.wizard-nav-center {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wizard-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .wizard-step-count {
   font-size: 0.8125rem;
   color: var(--text-muted);
+}
+
+.wizard-save-msg {
+  font-size: 0.75rem;
+  color: var(--ok);
+  font-weight: 500;
+}
+
+.wizard-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  margin: 0 8px 8px;
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  width: calc(100% - 16px);
+}
+
+.wizard-back-btn:hover {
+  background: var(--glass-hover);
+  border-color: var(--border-hover);
 }
 
 /* Form styles */

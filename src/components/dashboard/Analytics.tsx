@@ -31,9 +31,9 @@ export function Analytics({ posts, agent }: Props) {
   weekAgo.setDate(weekAgo.getDate() - 7);
   const postsThisWeek = posts.filter((p) => p.createdAt >= weekAgo.getTime()).length;
 
-  const connectedCount = agent
+  const connectedCount = agent?.platforms
     ? (["twitter", "facebook", "instagram"] as const).filter(
-        (p) => agent.platforms[p]?.connected
+        (p) => agent.platforms?.[p]?.connected
       ).length
     : 0;
 

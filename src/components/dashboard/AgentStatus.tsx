@@ -44,13 +44,14 @@ export function AgentStatus({ agent, onToggleStatus, onEdit }: Props) {
 
       <div className="agent-platforms-status">
         {(["twitter", "facebook", "instagram"] as Platform[]).map((p) => {
-          const connected = agent.platforms[p]?.connected;
-          const scheduled = agent.schedule[p]?.enabled;
+          const connected = agent.platforms?.[p]?.connected;
+          const scheduled = agent.schedule?.[p]?.enabled;
+          const postsPerDay = agent.schedule?.[p]?.postsPerDay || 0;
           return (
             <div key={p} className={`platform-status-item ${connected ? "connected" : ""}`}>
               <span className="platform-icon">{platformIcon(p)}</span>
               <span className={`platform-badge ${connected && scheduled ? "active" : connected ? "idle" : "off"}`}>
-                {connected && scheduled ? `${agent.schedule[p].postsPerDay}/day` : connected ? "Idle" : "Off"}
+                {connected && scheduled ? `${postsPerDay}/day` : connected ? "Idle" : "Off"}
               </span>
             </div>
           );

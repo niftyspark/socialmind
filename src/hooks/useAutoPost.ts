@@ -50,17 +50,19 @@ export function useAutoPost(
     let minGapMinutes = 60; // default 60 min between checks
 
     for (const platform of ["twitter", "facebook", "instagram"] as Platform[]) {
-      const sched = agent.schedule[platform];
+      const sched = agent.schedule?.[platform];
       if (!sched?.enabled) continue;
 
-      const postsPerDay = sched.postsPerDay || 1;
-      // If they want N posts/day, check every (24h / N / 2) to ensure we don't miss
+      const postsPerDay = Math.max(1, sched.postsPerDay || 1);
       const gapMinutes = Math.floor((24 * 60) / postsPerDay / 2);
-      minGapMinutes = Math.min(minGapMinutes, gapMinutes);
+      if (isFinite(gapMinutes) && gapMinutes > 0) {
+        minGapMinutes = Math.min(minGapMinutes, gapMinutes);
+      }
     }
 
     // Clamp between 2 minutes and 60 minutes
-    return Math.max(2, Math.min(60, minGapMinutes)) * 60 * 1000;
+    const clamped = Math.max(2, Math.min(60, minGapMinutes));
+    return isFinite(clamped) ? clamped * 60 * 1000 : 5 * 60 * 1000;
   }, [agent]);
 
   // Calculate min posting interval from schedule (posts per day -> min gap between posts)
@@ -70,17 +72,19 @@ export function useAutoPost(
     let minGapMs = 24 * 60 * 60 * 1000; // start at 24h
 
     for (const platform of ["twitter", "facebook", "instagram"] as Platform[]) {
-      const sched = agent.schedule[platform];
+      const sched = agent.schedule?.[platform];
       if (!sched?.enabled) continue;
 
-      const postsPerDay = sched.postsPerDay || 1;
-      // Minimum gap = 24h / postsPerDay * 0.8 (allow some flexibility)
+      const postsPerDay = Math.max(1, sched.postsPerDay || 1);
       const gapMs = Math.floor((24 * 60 * 60 * 1000) / postsPerDay * 0.8);
-      minGapMs = Math.min(minGapMs, gapMs);
+      if (isFinite(gapMs) && gapMs > 0) {
+        minGapMs = Math.min(minGapMs, gapMs);
+      }
     }
 
     // At least 10 minutes between posts
-    return Math.max(10 * 60 * 1000, minGapMs);
+    const result = Math.max(10 * 60 * 1000, minGapMs);
+    return isFinite(result) ? result : 30 * 60 * 1000;
   }, [agent]);
 
   const runCheck = useCallback(async () => {

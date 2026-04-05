@@ -184,12 +184,13 @@ export function ContentRules({ rules, onChange }: Props) {
                   type="number"
                   className="form-input"
                   value={rules.maxPostLength[platform]}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
                     update("maxPostLength", {
                       ...rules.maxPostLength,
-                      [platform]: parseInt(e.target.value) || 280,
-                    })
-                  }
+                      [platform]: isNaN(val) ? 280 : Math.max(1, Math.min(10000, val)),
+                    });
+                  }}
                 />
               </div>
             ))}

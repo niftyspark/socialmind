@@ -249,7 +249,47 @@ async function postToInstagram(
       return { success: false, error: 'No creation ID returned from Instagram. Container response: ' + JSON.stringify(containerData) };
     }
 
-    // Step 4: Publish the container
+    // Step 4: Wait for Instagram to process the media container.
+    // Instagram needs time to download and process the image before we can publish.
+    // Poll the container status, retrying up to 5 times with increasing delays.
+    let mediaReady = false;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      // Wait: 5s, 8s, 10s, 12s, 15s (total ~50s max)
+      const delayMs = [5000, 8000, 10000, 12000, 15000][attempt];
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+
+      try {
+        const statusResult = await executeComposioAction(
+          'INSTAGRAM_GET_POST_STATUS',
+          { ig_container_id: creationId, ig_user_id: igUserId },
+          connection.connectedAccountId,
+        );
+        const statusData = statusResult.data || {};
+        const statusCode = (statusData.status_code || statusData.status || '').toString().toUpperCase();
+
+        if (statusCode === 'FINISHED' || statusCode === 'PUBLISHED') {
+          mediaReady = true;
+          break;
+        }
+        if (statusCode === 'ERROR') {
+          return { success: false, error: `Instagram media processing failed: ${JSON.stringify(statusData)}` };
+        }
+        // IN_PROGRESS — keep waiting
+      } catch {
+        // Status check failed — still try publishing after the wait
+        if (attempt >= 2) {
+          mediaReady = true; // attempt publish anyway after enough waiting
+          break;
+        }
+      }
+    }
+
+    if (!mediaReady) {
+      // Last resort: try publishing anyway — sometimes status check isn't available
+      // but the media is actually ready
+    }
+
+    // Step 5: Publish the container
     const publishResult = await executeComposioAction(
       'INSTAGRAM_CREATE_POST',
       {
@@ -269,9 +309,15 @@ async function postToInstagram(
       };
     }
 
+    // If publish failed, extract the error detail
+    const pubErrData = publishResult.data || {};
+    const pubErrMsg = (pubErrData.error as Record<string, unknown>)?.error_user_msg
+      || (pubErrData.error as Record<string, unknown>)?.message
+      || publishResult.error
+      || 'Failed to publish Instagram post';
     return {
       success: false,
-      error: publishResult.error || 'Failed to publish Instagram post',
+      error: `Failed to create post (status ${(pubErrData.error as Record<string, unknown>)?.code || 'unknown'}). Response: ${JSON.stringify(pubErrData.error || pubErrMsg)}`,
     };
   } catch (error) {
     return { success: false, error: `Instagram via Composio: ${error}` };
