@@ -169,6 +169,23 @@ export async function postNow(platform?: string, content?: string) {
   return response.json();
 }
 
+/**
+ * Trigger the auto-posting engine for the current user.
+ * Called by the dashboard's auto-post scheduler.
+ * force=true skips time-slot checks, minInterval prevents double-posting.
+ */
+export async function triggerAutoPost(force = false, minIntervalMs = 1800000) {
+  const response = await fetch(
+    `${API_BASE}/cron?force=${force}&minInterval=${minIntervalMs}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    }
+  );
+  if (!response.ok) return null;
+  return response.json();
+}
+
 // ============================================================
 // Social API — consolidated: /api/social?action=connect|disconnect|status|callback
 // ============================================================

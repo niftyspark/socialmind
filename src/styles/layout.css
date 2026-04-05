@@ -7,7 +7,7 @@
   height: 100vh;
   width: 100vw;
   overflow: hidden;
-  background: var(--bg);
+  background: transparent;
 }
 
 /* --- Sidebar --- */
@@ -17,8 +17,10 @@
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
   height: 100vh;
-  background: var(--sidebar-bg);
-  border-right: 1px solid var(--border);
+  background: var(--glass);
+  backdrop-filter: blur(var(--glass-blur-heavy));
+  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
+  border-right: 1px solid var(--glass-strong);
   transition: transform var(--duration-slow) var(--ease-out),
     width var(--duration-slow) var(--ease-out),
     min-width var(--duration-slow) var(--ease-out);
@@ -37,7 +39,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--glass-strong);
   min-height: 56px;
 }
 
@@ -87,21 +89,26 @@
   gap: 8px;
   margin: 12px 12px 0;
   padding: 10px 14px;
-  background: var(--accent);
-  color: white;
-  border: none;
+  background: var(--glass-strong);
+  color: var(--accent);
+  border: 1px solid var(--accent-subtle);
   border-radius: var(--radius-md);
   font-size: 0.875rem;
   font-weight: 600;
   font-family: var(--font-body);
   cursor: pointer;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--shadow-neon);
   transition: background var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out);
+    box-shadow var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
 }
 
 .new-chat-btn:hover {
-  background: var(--accent-hover);
+  background: var(--glass-hover);
   box-shadow: var(--shadow-glow);
+  border-color: var(--accent);
 }
 
 .sidebar-search {
@@ -110,14 +117,17 @@
   gap: 8px;
   margin: 12px;
   padding: 8px 12px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
+  background: var(--glass);
+  border: 1px solid var(--glass-strong);
   border-radius: var(--radius-md);
-  transition: border-color var(--duration-fast);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  transition: border-color var(--duration-fast), background var(--duration-fast);
 }
 
 .sidebar-search:focus-within {
   border-color: var(--accent);
+  background: var(--glass-strong);
 }
 
 .search-icon {
@@ -201,11 +211,14 @@
 }
 
 .session-item:hover {
-  background: var(--bg-hover);
+  background: var(--glass-hover);
 }
 
 .session-item.active {
-  background: var(--bg-active);
+  background: var(--accent-subtle);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-strong);
 }
 
 .session-item.active::before {
@@ -265,7 +278,10 @@
 /* Sidebar footer */
 .sidebar-footer {
   padding: 12px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--glass-strong);
+  background: var(--glass);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
 .settings-btn {
@@ -274,19 +290,23 @@
   gap: 8px;
   width: 100%;
   padding: 8px 12px;
-  background: none;
-  border: none;
+  background: var(--glass);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   color: var(--text-muted);
   font-size: 0.8125rem;
   font-family: var(--font-body);
   cursor: pointer;
-  transition: background var(--duration-fast), color var(--duration-fast);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  transition: background var(--duration-fast), color var(--duration-fast),
+    border-color var(--duration-fast);
 }
 
 .settings-btn:hover {
-  background: var(--bg-hover);
+  background: var(--glass-hover);
   color: var(--text);
+  border-color: var(--glass-strong);
 }
 
 /* --- Main Content --- */
@@ -316,7 +336,7 @@
 }
 
 .icon-btn:hover {
-  background: var(--bg-hover);
+  background: var(--glass-hover);
   color: var(--text);
 }
 
@@ -345,13 +365,15 @@
 }
 
 .btn-secondary {
-  background: var(--bg-elevated);
+  background: var(--glass);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-strong);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 
 .btn-secondary:hover {
-  background: var(--bg-hover);
+  background: var(--glass-hover);
   border-color: var(--border-strong);
 }
 

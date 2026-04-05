@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { FiSettings, FiLogOut, FiMenu } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import { getAgentConfig, getPostHistory, updateAgentConfig } from "../utils/api";
 import type { AgentConfig, PostLog } from "../types/agent";
+import { useAutoPost } from "../hooks/useAutoPost";
 import { AgentStatus } from "./dashboard/AgentStatus";
 import { ActivityFeed } from "./dashboard/ActivityFeed";
 import { QuickActions } from "./dashboard/QuickActions";
 import { Analytics } from "./dashboard/Analytics";
+import { AutoPostIndicator } from "./dashboard/AutoPostIndicator";
 
 interface Props {
   onEditAgent: () => void;
@@ -37,11 +39,17 @@ export function Dashboard({ onEditAgent }: Props) {
     loadData();
   }, []);
 
+  const handleNewPosts = useCallback((newPosts: PostLog[]) => {
+    setPosts(newPosts);
+  }, []);
+
+  // Auto-posting hook — runs while dashboard is open and agent is active
+  const autoPostState = useAutoPost(agent, handleNewPosts);
+
   const handleStatusToggle = async () => {
     if (!agent) return;
     const newStatus = agent.status === "active" ? "paused" : "active";
     setAgent({ ...agent, status: newStatus });
-    // Update via API
     try {
       await updateAgentConfig({ status: newStatus });
     } catch (err) {
@@ -75,6 +83,10 @@ export function Dashboard({ onEditAgent }: Props) {
           </div>
         </div>
 
+        <div className="topbar-center">
+          <AutoPostIndicator state={autoPostState} />
+        </div>
+
         <div className="topbar-right">
           <div className="topbar-user">
             <span className="user-name">{user?.name}</span>
@@ -99,10 +111,7 @@ export function Dashboard({ onEditAgent }: Props) {
               onEdit={onEditAgent}
             />
           )}
-          <QuickActions
-            agent={agent}
-            onEditAgent={onEditAgent}
-          />
+          <QuickActions agent={agent} onEditAgent={onEditAgent} />
         </div>
 
         <main className="dashboard-main">
