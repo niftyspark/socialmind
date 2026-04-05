@@ -1,0 +1,182 @@
+/* ============================================================
+   Shared UI Components
+   ============================================================ */
+
+/* --- Dropdown Menu --- */
+.topbar-menu-wrapper {
+  position: relative;
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 200px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  padding: 4px;
+  animation: dropdown-in var(--duration-fast) var(--ease-out);
+}
+
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dropdown-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 0.8125rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+
+.dropdown-menu button:hover {
+  background: var(--bg-hover);
+}
+
+.dropdown-menu button.danger {
+  color: var(--danger);
+}
+
+.dropdown-menu button.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* --- Typing Indicator --- */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px;
+}
+
+.typing-indicator .dot {
+  width: 6px;
+  height: 6px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  animation: typing-bounce 1.4s infinite ease-in-out both;
+}
+
+.typing-indicator .dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-indicator .dot:nth-child(2) {
+  animation-delay: 0.16s;
+}
+
+.typing-indicator .dot:nth-child(3) {
+  animation-delay: 0.32s;
+}
+
+@keyframes typing-bounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* --- Token Badge --- */
+.token-badge {
+  font-size: 0.6875rem;
+  color: var(--text-subtle);
+  padding: 2px 6px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+/* --- Scroll to bottom --- */
+.scroll-to-bottom {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 16px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-family: var(--font-body);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  z-index: 10;
+  transition: background var(--duration-fast), box-shadow var(--duration-fast);
+  animation: slide-up var(--duration-normal) var(--ease-out);
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.scroll-to-bottom:hover {
+  background: var(--bg-hover);
+  box-shadow: var(--shadow-lg);
+}
+
+/* --- Error toast --- */
+.chat-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  margin: 0 16px 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--danger);
+  font-size: 0.8125rem;
+  animation: slide-up var(--duration-normal) var(--ease-out);
+}
+
+.chat-error button {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-family: var(--font-body);
+  text-decoration: underline;
+  white-space: nowrap;
+}

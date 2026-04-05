@@ -1,0 +1,53 @@
+// ============================================================
+// SocialMind — Neon Postgres Database Connection
+// Uses @neondatabase/serverless for HTTP-based queries.
+// ============================================================
+import { neon } from '@neondatabase/serverless';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _sql: any = null;
+
+function getSql() {
+  if (_sql) return _sql;
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error('DATABASE_URL environment variable is not set');
+  }
+  _sql = neon(databaseUrl);
+  return _sql;
+}
+
+/**
+ * Execute a parameterized SQL query.
+ * Uses neon's sql.query() method for conventional parameterized queries.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function query(queryText: string, params: any[] = []): Promise<Record<string, unknown>[]> {
+  const sql = getSql();
+  // neon v1.x: use sql.query() for parameterized string queries
+  if (typeof sql.query === 'function') {
+    return sql.query(queryText, params);
+  }
+  // fallback for older versions
+  return sql(queryText, params);
+}
+
+/** Run a query and return the first row or null */
+export async function queryOne<T = Record<string, unknown>>(
+  queryText: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  params: any[] = [],
+): Promise<T | null> {
+  const rows = await query(queryText, params);
+  return (rows[0] as T) || null;
+}
+
+/** Run a query and return all rows */
+export async function queryAll<T = Record<string, unknown>>(
+  queryText: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  params: any[] = [],
+): Promise<T[]> {
+  const rows = await query(queryText, params);
+  return rows as T[];
+}
