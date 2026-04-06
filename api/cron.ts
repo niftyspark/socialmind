@@ -41,22 +41,45 @@ async function buildAgentConfig(agentRow: { user_id: string; config: unknown; st
     }
   }
 
-  // Source 2: Agent config JSON (wizard stores connectedAccountId directly)
-  // This is the fallback — if the JSON says connected with an accountId but
-  // the DB table doesn't, trust the JSON.
+  // Source 2: Agent config JSON fallback
+  const rawConfig = typeof agentRow.config === 'string' ? JSON.parse(agentRow.config) : agentRow.config;
+  const rawPlatform = (rawConfig as Record<string, unknown>)?.platforms as Record<string, Record<string, unknown>> | undefined;
   for (const p of ['twitter', 'facebook', 'instagram'] as Platform[]) {
-    const configPlatform = agent.platforms[p];
-    if (configPlatform?.connected && configPlatform?.connectedAccountId) {
-      // Already good — either from DB or from JSON
-      continue;
-    }
-    // Check if JSON originally had a connection that the DB merge didn't pick up
-    const rawConfig = typeof agentRow.config === 'string' ? JSON.parse(agentRow.config) : agentRow.config;
-    const rawPlatform = (rawConfig as Record<string, unknown>)?.platforms as Record<string, Record<string, unknown>> | undefined;
+    if (agent.platforms[p]?.connected && agent.platforms[p]?.connectedAccountId) continue;
     if (rawPlatform?.[p]?.connected && rawPlatform[p].connectedAccountId) {
       agent.platforms[p].connected = true;
       agent.platforms[p].connectedAccountId = rawPlatform[p].connectedAccountId as string;
       agent.platforms[p].handle = (rawPlatform[p].handle as string) || undefined;
+    }
+  }
+
+  // Source 3: Verify account IDs against Composio — auto-fix stale/expired connections
+  const composioKey = process.env.COMPOSIO_API_KEY;
+  if (composioKey) {
+    for (const p of ['twitter', 'facebook', 'instagram'] as Platform[]) {
+      if (!agent.platforms[p]?.connected || !agent.platforms[p]?.connectedAccountId) continue;
+      try {
+        const checkRes = await fetch(`https://backend.composio.dev/api/v1/connectedAccounts/${agent.platforms[p].connectedAccountId}`, {
+          headers: { 'x-api-key': composioKey },
+        });
+        const checkData = checkRes.ok ? await checkRes.json() : null;
+        if (!checkData || checkData.status !== 'ACTIVE') {
+          // Stale account — find any ACTIVE connection for this platform
+          const searchRes = await fetch(
+            `https://backend.composio.dev/api/v1/connectedAccounts?appNames=${p}&status=ACTIVE&limit=1`,
+            { headers: { 'x-api-key': composioKey } },
+          );
+          if (searchRes.ok) {
+            const searchData = await searchRes.json();
+            const items = searchData.items || searchData || [];
+            if (items.length > 0) {
+              agent.platforms[p].connectedAccountId = items[0].id;
+            } else {
+              agent.platforms[p].connected = false;
+            }
+          }
+        }
+      } catch { /* keep existing */ }
     }
   }
 

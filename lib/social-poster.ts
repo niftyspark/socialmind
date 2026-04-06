@@ -55,31 +55,41 @@ function isSuccess(result: ComposioActionResult): boolean {
 
 /**
  * Generate a direct, public image URL for Instagram posts.
- * Instagram requires a non-redirecting, publicly accessible image URL.
+ * Instagram requires a publicly accessible, non-redirecting image URL.
  * 
- * Uses picsum.photos and resolves the redirect to get the direct fastly CDN URL.
+ * Uses Unsplash Source URLs which Instagram accepts reliably.
  * The text goes in the Instagram caption, not on the image itself.
  */
-async function generateImageUrl(content: string): Promise<string> {
-  // Create a deterministic seed from content
+const UNSPLASH_IMAGES = [
+  'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1500534314263-a834e24aa5f3?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1534972195531-d756b9bfa9f2?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1559028012-481c04fa702d?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=1080&h=1080&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1080&h=1080&fit=crop&q=80',
+];
+
+function generateImageUrl(content: string): string {
   let hash = 0;
   for (let i = 0; i < content.length; i++) {
     hash = ((hash << 5) - hash + content.charCodeAt(i)) | 0;
   }
-  const seed = Math.abs(hash) % 1000;
-  const picsumUrl = `https://picsum.photos/seed/${seed}/1080/1080.jpg`;
-
-  // Resolve the 302 redirect to get the direct CDN URL
-  try {
-    const response = await fetch(picsumUrl, { method: 'HEAD', redirect: 'manual' });
-    const location = response.headers.get('location');
-    if (location) return location;
-  } catch {
-    // fallback below
-  }
-
-  // Fallback: use a known static public image
-  return 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1080&h=1080&fit=crop&q=80';
+  const index = Math.abs(hash) % UNSPLASH_IMAGES.length;
+  return UNSPLASH_IMAGES[index];
 }
 
 // ----------------------------------------------------------------
@@ -215,31 +225,41 @@ async function postToInstagram(
 
     // Step 2: Generate an image if none provided
     // Instagram requires an image_url for feed posts — text-only is not supported.
-    const finalImageUrl = imageUrl || await generateImageUrl(content);
+    const finalImageUrl = imageUrl || generateImageUrl(content);
 
-    // Step 3: Create a media container (draft)
-    const containerResult = await executeComposioAction(
-      'INSTAGRAM_CREATE_MEDIA_CONTAINER',
-      {
-        ig_user_id: igUserId,
-        image_url: finalImageUrl,
-        caption: content,
-        content_type: 'photo',
-      },
-      connection.connectedAccountId,
-    );
+    // Step 3: Create a media container (draft) — retry up to 3 times for transient errors
+    let containerResult: ComposioActionResult | null = null;
+    let lastContainerError = '';
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        await new Promise(r => setTimeout(r, 3000 * attempt)); // 3s, 6s backoff
+      }
+      containerResult = await executeComposioAction(
+        'INSTAGRAM_CREATE_MEDIA_CONTAINER',
+        {
+          ig_user_id: igUserId,
+          image_url: finalImageUrl,
+          caption: content,
+          content_type: 'photo',
+        },
+        connection.connectedAccountId,
+      );
+      if (isSuccess(containerResult)) break;
 
-    if (!isSuccess(containerResult)) {
-      // Extract detailed error from Composio/Instagram response
+      // Check if it's a transient error worth retrying
       const errData = containerResult.data || {};
-      const igError = (errData.error as Record<string, unknown>)?.error_user_msg
-        || (errData.error as Record<string, unknown>)?.message
-        || containerResult.error;
+      const errObj = errData.error as Record<string, unknown> | undefined;
+      const isTransient = errObj?.is_transient === true || String(errObj?.code) === '2';
+      lastContainerError = JSON.stringify(errObj || containerResult.error || errData);
+
+      if (!isTransient) break; // non-transient error, don't retry
+    }
+
+    if (!containerResult || !isSuccess(containerResult)) {
       return {
         success: false,
-        error: `Failed to create container (status ${containerResult.error ? 'error' : 'unknown'}). Response: ${JSON.stringify(errData.error || containerResult.error || errData)}`,
+        error: `Failed to create Instagram container after retries. Last error: ${lastContainerError}`,
       };
-      void igError; // used in the error string above indirectly
     }
 
     const containerData = containerResult.data || {};
