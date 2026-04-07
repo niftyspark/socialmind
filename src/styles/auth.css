@@ -65,21 +65,104 @@
   margin-top: 4px;
 }
 
-/* Google Sign-In Button */
-.auth-google-btn {
+/* Chain badge */
+.auth-chain-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 4px 12px;
+  background: rgba(56, 97, 251, 0.1);
+  border: 1px solid rgba(56, 97, 251, 0.2);
+  border-radius: var(--radius-full);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #3861fb;
+}
+.chain-dot {
+  width: 6px;
+  height: 6px;
+  background: #3861fb;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(56, 97, 251, 0.5);
+}
+
+/* Connect Wallet Button */
+.auth-wallet-btn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   width: 100%;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #1f1f1f;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 16px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+  color: #0a0a1a;
+  border: none;
   border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 1rem;
+  font-weight: 600;
   font-family: var(--font-body);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+  box-shadow: var(--shadow-neon);
+}
+.auth-wallet-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+.auth-wallet-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-signing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.auth-wallet-info {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.auth-wallets-supported {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 0.6875rem;
+  color: var(--text-subtle);
+}
+.wallet-logos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.wallet-tag {
+  padding: 3px 10px;
+  background: var(--glass);
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 0.625rem;
+  color: var(--text-muted);
+}
+
+/* Legacy - keep for backwards compat */
+.auth-google-btn {
+  display: none;
   cursor: pointer;
   transition: all var(--duration-fast);
 }

@@ -12,17 +12,20 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
+    "@rainbow-me/rainbowkit": "^2.2.10",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.5.0",
+    "@tanstack/react-query": "^5.96.2",
     "composio-core": "^0.5.39",
     "dompurify": "^3.3.3",
-    "firebase": "^11.0.0",
     "marked": "^17.0.5",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-icons": "^5.6.0",
     "three": "^0.183.2",
-    "uuid": "^13.0.0"
+    "uuid": "^13.0.0",
+    "viem": "^2.47.10",
+    "wagmi": "^3.6.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",

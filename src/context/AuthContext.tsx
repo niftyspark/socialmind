@@ -6,14 +6,14 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { authLogin, authRegister, authGoogleLogin, authGetMe } from "../utils/api";
-import { signInWithGoogle } from "../lib/firebase";
+import { authGetNonce, authWalletLogin, authGetMe } from "../utils/api";
 
 interface User {
   id: string;
   email: string;
   name: string;
   image?: string;
+  walletAddress?: string;
   createdAt: number;
 }
 
@@ -21,9 +21,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
-  loginWithGoogle: () => Promise<void>;
+  loginWithWallet: (address: string, signMessage: (args: { message: string }) => Promise<string>) => Promise<void>;
   logout: () => void;
   error: string | null;
   clearError: () => void;
@@ -38,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Check for existing session on mount
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
@@ -50,48 +49,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
-    setError(null);
-    try {
-      const data = await authLogin(email, password);
-      localStorage.setItem(TOKEN_KEY, data.token);
-      setUser(data.user);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
-      throw err;
-    }
-  }, []);
+  const loginWithWallet = useCallback(
+    async (
+      address: string,
+      signMessage: (args: { message: string }) => Promise<string>
+    ) => {
+      setError(null);
+      try {
+        // 1. Get a nonce from the server
+        const { nonce } = await authGetNonce();
 
-  const register = useCallback(async (email: string, password: string, name: string) => {
-    setError(null);
-    try {
-      const data = await authRegister(email, password, name);
-      localStorage.setItem(TOKEN_KEY, data.token);
-      setUser(data.user);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
-      throw err;
-    }
-  }, []);
+        // 2. Build the SIWE message
+        const message = [
+          "Sign in to SocialMind",
+          "",
+          `Wallet: ${address}`,
+          `Chain: Base`,
+          `Nonce: ${nonce}`,
+          `Issued At: ${new Date().toISOString()}`,
+        ].join("\n");
 
-  const loginWithGoogle = useCallback(async () => {
-    setError(null);
-    try {
-      // 1. Firebase handles the Google popup
-      const firebaseResult = await signInWithGoogle();
-      // 2. Send the Firebase ID token to our backend
-      const data = await authGoogleLogin(firebaseResult.idToken);
-      localStorage.setItem(TOKEN_KEY, data.token);
-      setUser(data.user);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Google sign-in failed";
-      // Don't show error if user simply closed the popup
-      if (!msg.includes("popup-closed-by-user") && !msg.includes("cancelled")) {
-        setError(msg);
+        // 3. Ask the wallet to sign the message
+        const signature = await signMessage({ message });
+
+        // 4. Send to backend for verification
+        const data = await authWalletLogin(address, signature, message, nonce);
+        localStorage.setItem(TOKEN_KEY, data.token);
+        setUser(data.user);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Wallet sign-in failed";
+        if (!msg.includes("rejected") && !msg.includes("denied")) {
+          setError(msg);
+        }
+        throw err;
       }
-      throw err;
-    }
-  }, []);
+    },
+    []
+  );
 
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
@@ -106,9 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
-        login,
-        register,
-        loginWithGoogle,
+        loginWithWallet,
         logout,
         error,
         clearError,

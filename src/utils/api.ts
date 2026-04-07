@@ -83,33 +83,23 @@ export async function chatCompletion(messages: ChatMessage[], settings: AppSetti
 // Auth API — consolidated: POST /api/auth, GET /api/auth
 // ============================================================
 
-export async function authLogin(email: string, password: string) {
+export async function authGetNonce(): Promise<{ nonce: string }> {
   const response = await fetch(`${API_BASE}/auth`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "login", email, password }),
+    body: JSON.stringify({ action: "nonce" }),
   });
-  if (!response.ok) { const err = await response.json(); throw new Error(err.error || "Login failed"); }
+  if (!response.ok) throw new Error("Failed to get nonce");
   return response.json();
 }
 
-export async function authRegister(email: string, password: string, name: string) {
+export async function authWalletLogin(address: string, signature: string, message: string, nonce: string) {
   const response = await fetch(`${API_BASE}/auth`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "register", email, password, name }),
+    body: JSON.stringify({ action: "wallet", address, signature, message, nonce }),
   });
-  if (!response.ok) { const err = await response.json(); throw new Error(err.error || "Registration failed"); }
-  return response.json();
-}
-
-export async function authGoogleLogin(idToken: string) {
-  const response = await fetch(`${API_BASE}/auth`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "google", idToken }),
-  });
-  if (!response.ok) { const err = await response.json(); throw new Error(err.error || "Google login failed"); }
+  if (!response.ok) { const err = await response.json(); throw new Error(err.error || "Wallet login failed"); }
   return response.json();
 }
 

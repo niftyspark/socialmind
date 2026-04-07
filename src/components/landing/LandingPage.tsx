@@ -102,7 +102,7 @@ export function LandingPage({ onEnterApp }: Props) {
             <a href="#pricing">Pricing</a>
           </div>
           <button className="landing-cta-btn" onClick={onEnterApp}>
-            Launch App <FiArrowRight />
+            Connect Wallet <FiArrowRight />
           </button>
         </div>
       </nav>
@@ -114,7 +114,7 @@ export function LandingPage({ onEnterApp }: Props) {
         </Suspense>
         <div className="landing-hero-content">
           <div className="landing-hero-badge">
-            <FiStar /> AI-Powered Social Media Automation
+            <FiStar /> Web3 AI-Powered Social Media Agent on Base
           </div>
           <h1 className="landing-hero-title">
             Your Social Media
@@ -127,7 +127,7 @@ export function LandingPage({ onEnterApp }: Props) {
           </p>
           <div className="landing-hero-actions">
             <button className="landing-hero-btn primary" onClick={onEnterApp}>
-              Start Free <FiArrowRight />
+              Connect Wallet <FiArrowRight />
             </button>
             <a className="landing-hero-btn secondary" href="#features">
               See How It Works
@@ -137,7 +137,7 @@ export function LandingPage({ onEnterApp }: Props) {
             <FaInstagram />
             <FaXTwitter />
             <FaFacebook />
-            <span>Works with all major platforms</span>
+            <span>Built on Base chain</span>
           </div>
         </div>
       </section>

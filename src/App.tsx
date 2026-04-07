@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ChatProvider } from "./context/ChatContext";
+import { Web3Provider } from "./lib/web3";
 import { LoginPage } from "./components/auth/LoginPage";
 import { SetupWizard } from "./components/SetupWizard";
 import { Dashboard } from "./components/Dashboard";
@@ -34,18 +35,15 @@ function AppRouter() {
     document.documentElement.setAttribute("data-theme", "dark");
   }, []);
 
-  // Route: if no hash or #/ show landing, if #/app show the app
   useEffect(() => {
     const isAppRoute = hash === "#/app" || hash.startsWith("#/app");
 
     if (!isAppRoute) {
       setView("landing");
-      // Allow body scroll on landing page
       document.body.style.overflow = "auto";
       return;
     }
 
-    // App route — lock scroll
     document.body.style.overflow = "hidden";
 
     if (authLoading) {
@@ -71,9 +69,7 @@ function AppRouter() {
       .catch(() => setView("setup"));
   }, [hash, isAuthenticated, authLoading]);
 
-  const handleEnterApp = useCallback(() => {
-    navigate("#/app");
-  }, [navigate]);
+  const handleEnterApp = useCallback(() => navigate("#/app"), [navigate]);
 
   const handleSetupComplete = useCallback(() => {
     getAgentConfig().then((data) => {
@@ -82,13 +78,9 @@ function AppRouter() {
     });
   }, []);
 
-  const handleEditAgent = useCallback(() => {
-    setView("setup");
-  }, []);
+  const handleEditAgent = useCallback(() => setView("setup"), []);
 
-  if (view === "landing") {
-    return <LandingPage onEnterApp={handleEnterApp} />;
-  }
+  if (view === "landing") return <LandingPage onEnterApp={handleEnterApp} />;
 
   if (view === "loading") {
     return (
@@ -99,17 +91,10 @@ function AppRouter() {
     );
   }
 
-  if (view === "login") {
-    return <LoginPage />;
-  }
+  if (view === "login") return <LoginPage />;
 
   if (view === "setup") {
-    return (
-      <SetupWizard
-        existingConfig={agentConfig}
-        onComplete={handleSetupComplete}
-      />
-    );
+    return <SetupWizard existingConfig={agentConfig} onComplete={handleSetupComplete} />;
   }
 
   return (
@@ -121,9 +106,11 @@ function AppRouter() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppRouter />
-    </AuthProvider>
+    <Web3Provider>
+      <AuthProvider>
+        <AppRouter />
+      </AuthProvider>
+    </Web3Provider>
   );
 }
 
