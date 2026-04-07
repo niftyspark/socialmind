@@ -976,6 +976,107 @@
   margin-top: 4px;
 }
 
+/* Image Library */
+.image-upload-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  transition: all var(--duration-fast);
+}
+.image-upload-zone:hover {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.image-upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+.image-upload-hint {
+  font-size: 0.6875rem;
+  color: var(--text-subtle);
+}
+
+.image-grid-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.image-grid-header {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.image-grid-item {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.image-grid-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.image-grid-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(transparent 50%, rgba(0,0,0,0.7));
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 8px;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+.image-grid-item:hover .image-grid-overlay {
+  opacity: 1;
+}
+.image-grid-name {
+  font-size: 0.625rem;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 70%;
+}
+.image-grid-delete {
+  background: rgba(248, 113, 113, 0.8);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.75rem;
+}
+.image-grid-delete:hover {
+  background: var(--danger);
+}
+
 /* Review page */
 .review-container {
   display: flex;

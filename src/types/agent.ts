@@ -87,6 +87,13 @@ export interface ContentRules {
   includeLinks: boolean;
 }
 
+export interface ImageLibraryItem {
+  id: string;
+  url: string; // public URL served via /api/images?id=xxx
+  name: string;
+  uploadedAt: number;
+}
+
 export interface AgentConfig {
   id: string;
   userId: string;
@@ -96,6 +103,7 @@ export interface AgentConfig {
   platforms: PlatformConnections;
   schedule: PostingSchedule;
   rules: ContentRules;
+  imageLibrary: ImageLibraryItem[];
   status: AgentStatus;
   createdAt: number;
   updatedAt: number;
@@ -193,6 +201,7 @@ export const DEFAULT_AGENT_CONFIG: Omit<AgentConfig, 'id' | 'userId' | 'createdA
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   },
   rules: { ...DEFAULT_CONTENT_RULES },
+  imageLibrary: [],
   status: 'setup',
 };
 
@@ -203,6 +212,7 @@ export const WIZARD_STEPS = [
   { id: 'inspiration', title: 'Inspiration', description: 'Accounts to draw style from' },
   { id: 'platforms', title: 'Connect Platforms', description: 'Link your social accounts' },
   { id: 'schedule', title: 'Posting Schedule', description: 'When and how often to post' },
+  { id: 'images', title: 'Image Library', description: 'Upload images for Instagram posts' },
   { id: 'rules', title: 'Content Rules', description: 'Guidelines and boundaries' },
   { id: 'review', title: 'Review & Launch', description: 'Confirm and activate' },
 ] as const;

@@ -224,3 +224,46 @@ export async function pollConnectionStatus(platform: string, intervalMs = 3000, 
   }
   return false;
 }
+
+// ============================================================
+// Image Library API
+// ============================================================
+
+export async function uploadImage(file: File): Promise<{ id: string; url: string; name: string }> {
+  // Convert file to base64
+  const base64 = await new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(",")[1]); // strip data:image/...;base64, prefix
+    };
+    reader.readAsDataURL(file);
+  });
+
+  const response = await fetch(`${API_BASE}/images`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify({ name: file.name, data: base64, mimeType: file.type }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: "Upload failed" }));
+    throw new Error(err.error || "Failed to upload image");
+  }
+  return response.json();
+}
+
+export async function listImages(): Promise<{ images: Array<{ id: string; url: string; name: string; uploadedAt: number }> }> {
+  const response = await fetch(`${API_BASE}/images`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+  });
+  if (!response.ok) return { images: [] };
+  return response.json();
+}
+
+export async function deleteImage(id: string): Promise<void> {
+  await fetch(`${API_BASE}/images?id=${id}`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  });
+}

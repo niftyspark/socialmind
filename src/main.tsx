@@ -9,6 +9,7 @@ import "./styles/dashboard.css";
 import "./styles/chat.css";
 import "./styles/settings.css";
 import "./styles/command-palette.css";
+import "./styles/landing.css";
 import App from "./App.tsx";
 
 createRoot(document.getElementById("root")!).render(
