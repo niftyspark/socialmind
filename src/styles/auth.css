@@ -119,10 +119,43 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  padding: 28px;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+}
+.auth-signing-hint {
+  font-size: 0.75rem;
+  color: var(--text-subtle);
+}
+
+.auth-no-metamask {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
   padding: 24px;
+  text-align: center;
   color: var(--text-muted);
   font-size: 0.875rem;
+}
+.auth-install-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, #e2761b, #cd6116);
+  color: white;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all var(--duration-fast);
+}
+.auth-install-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(226, 118, 27, 0.3);
+  text-decoration: none;
+  color: white;
 }
 
 .auth-wallet-info {

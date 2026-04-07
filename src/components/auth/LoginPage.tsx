@@ -1,36 +1,37 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { useAccount, useSignMessage, useDisconnect } from "wagmi";
+import { isMetaMaskInstalled } from "../../lib/metamask";
 import { FiAlertCircle, FiLoader } from "react-icons/fi";
 
+function MetaMaskLogo() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 35 33" fill="none">
+      <path d="M32.96 1l-13.14 9.72 2.45-5.73L32.96 1z" fill="#E2761B" stroke="#E2761B" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M2.66 1l13.02 9.81L13.35 4.99 2.66 1z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M28.23 23.53l-3.5 5.36 7.49 2.06 2.14-7.28-6.13-.14z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M1.27 23.67l2.13 7.28 7.47-2.06-3.48-5.36-6.12.14z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10.47 14.51l-2.08 3.14 7.4.34-.26-7.96-5.06 4.48z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M25.15 14.51l-5.13-4.58-.17 8.06 7.4-.34-2.1-3.14z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M10.87 28.89l4.49-2.16-3.88-3.02-.61 5.18z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M20.29 26.73l4.46 2.16-.6-5.18-3.86 3.02z" fill="#E4761B" stroke="#E4761B" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 export function LoginPage() {
-  const { loginWithWallet, error, clearError, isLoading } = useAuth();
-  const { openConnectModal } = useConnectModal();
-  const { address, isConnected } = useAccount();
-  const { signMessageAsync } = useSignMessage();
-  const { disconnect } = useDisconnect();
-  const [signingIn, setSigningIn] = useState(false);
+  const { connectWallet, error, clearError, isLoading } = useAuth();
+  const [connecting, setConnecting] = useState(false);
+  const hasMetaMask = isMetaMaskInstalled();
 
-  // When wallet connects, auto-trigger SIWE sign-in
-  useEffect(() => {
-    if (isConnected && address && !signingIn) {
-      handleSignIn();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected, address]);
-
-  const handleSignIn = async () => {
-    if (!address) return;
+  const handleConnect = async () => {
     clearError();
-    setSigningIn(true);
+    setConnecting(true);
     try {
-      await loginWithWallet(address, signMessageAsync);
+      await connectWallet();
     } catch {
-      // If sign-in fails, disconnect wallet so user can retry
-      disconnect();
+      // error handled in context
     } finally {
-      setSigningIn(false);
+      setConnecting(false);
     }
   };
 
@@ -66,35 +67,35 @@ export function LoginPage() {
           </div>
         )}
 
-        {signingIn ? (
+        {!hasMetaMask ? (
+          <div className="auth-no-metamask">
+            <MetaMaskLogo />
+            <p>MetaMask is required to use SocialMind</p>
+            <a
+              href="https://metamask.io/download/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="auth-install-btn"
+            >
+              Install MetaMask
+            </a>
+          </div>
+        ) : connecting ? (
           <div className="auth-signing">
-            <FiLoader className="spin" size={24} />
-            <p>Sign the message in your wallet to continue...</p>
+            <FiLoader className="spin" size={28} />
+            <p>Confirm in MetaMask...</p>
+            <p className="auth-signing-hint">Sign the message to verify your wallet</p>
           </div>
         ) : (
-          <button
-            className="auth-wallet-btn"
-            onClick={openConnectModal}
-            disabled={signingIn}
-          >
-            <WalletIcon />
-            <span>Connect Wallet</span>
+          <button className="auth-wallet-btn" onClick={handleConnect}>
+            <MetaMaskLogo />
+            <span>Connect with MetaMask</span>
           </button>
         )}
 
         <div className="auth-wallet-info">
-          <p>Connect your wallet on Base chain to sign in.</p>
-          <p>No email or password needed.</p>
-        </div>
-
-        <div className="auth-wallets-supported">
-          <span>Supports</span>
-          <div className="wallet-logos">
-            <span className="wallet-tag">MetaMask</span>
-            <span className="wallet-tag">Coinbase Wallet</span>
-            <span className="wallet-tag">WalletConnect</span>
-            <span className="wallet-tag">Rainbow</span>
-          </div>
+          <p>Connect your MetaMask wallet on Base chain.</p>
+          <p>No email, no password — just your wallet.</p>
         </div>
 
         <div className="auth-features">
@@ -113,15 +114,5 @@ export function LoginPage() {
         </div>
       </div>
     </div>
-  );
-}
-
-function WalletIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-      <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-      <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
-    </svg>
   );
 }

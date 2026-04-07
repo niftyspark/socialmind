@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ChatProvider } from "./context/ChatContext";
-import { Web3Provider } from "./lib/web3";
 import { LoginPage } from "./components/auth/LoginPage";
 import { SetupWizard } from "./components/SetupWizard";
 import { Dashboard } from "./components/Dashboard";
@@ -106,11 +105,9 @@ function AppRouter() {
 
 function App() {
   return (
-    <Web3Provider>
-      <AuthProvider>
-        <AppRouter />
-      </AuthProvider>
-    </Web3Provider>
+    <AuthProvider>
+      <AppRouter />
+    </AuthProvider>
   );
 }
 
