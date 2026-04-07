@@ -43,26 +43,22 @@ export function useAutoPost(
   const isActiveRef = useRef(false);
 
   // Calculate check interval from agent schedule
-  // Use the minimum time between any platform's time slots, capped at 5-60 min
+  // For N posts/day, check every few minutes so posts are spread across the day
   const getCheckIntervalMs = useCallback((): number => {
     if (!agent?.schedule) return 5 * 60 * 1000; // default 5 min
 
-    let minGapMinutes = 60; // default 60 min between checks
+    let hasEnabledPlatform = false;
 
     for (const platform of ["twitter", "facebook", "instagram"] as Platform[]) {
       const sched = agent.schedule?.[platform];
-      if (!sched?.enabled) continue;
-
-      const postsPerDay = Math.max(1, sched.postsPerDay || 1);
-      const gapMinutes = Math.floor((24 * 60) / postsPerDay / 2);
-      if (isFinite(gapMinutes) && gapMinutes > 0) {
-        minGapMinutes = Math.min(minGapMinutes, gapMinutes);
-      }
+      if (sched?.enabled) hasEnabledPlatform = true;
     }
 
-    // Clamp between 2 minutes and 60 minutes
-    const clamped = Math.max(2, Math.min(60, minGapMinutes));
-    return isFinite(clamped) ? clamped * 60 * 1000 : 5 * 60 * 1000;
+    if (!hasEnabledPlatform) return 10 * 60 * 1000; // 10 min if nothing enabled
+
+    // Check every 5 minutes — the backend handles anti-duplicate logic
+    // so frequent checks are safe and ensure timely posting
+    return 5 * 60 * 1000;
   }, [agent]);
 
   // Calculate min posting interval from schedule (posts per day -> min gap between posts)

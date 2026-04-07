@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FiZap, FiPause, FiClock } from "react-icons/fi";
+import { FiZap, FiPause, FiClock, FiCheck } from "react-icons/fi";
 
 interface AutoPostState {
   isRunning: boolean;
@@ -21,7 +21,7 @@ interface Props {
 function formatTimeUntil(timestamp: number | null): string {
   if (!timestamp) return "--";
   const diff = timestamp - Date.now();
-  if (diff <= 0) return "now";
+  if (diff <= 0) return "checking...";
   const minutes = Math.floor(diff / 60000);
   const seconds = Math.floor((diff % 60000) / 1000);
   if (minutes > 0) return `${minutes}m ${seconds}s`;
@@ -29,7 +29,7 @@ function formatTimeUntil(timestamp: number | null): string {
 }
 
 function formatTimeAgo(timestamp: number | null): string {
-  if (!timestamp) return "never";
+  if (!timestamp) return "";
   const diff = Date.now() - timestamp;
   if (diff < 60000) return "just now";
   const minutes = Math.floor(diff / 60000);
@@ -41,14 +41,18 @@ function formatTimeAgo(timestamp: number | null): string {
 export function AutoPostIndicator({ state }: Props) {
   const [, setTick] = useState(0);
 
-  // Re-render every 5 seconds to update countdown
   useEffect(() => {
     if (!state.isRunning) return;
-    const interval = setInterval(() => setTick((t) => t + 1), 5000);
+    const interval = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(interval);
   }, [state.isRunning]);
 
+  // Find the most recent SUCCESS result (not failures from stale connections)
+  const lastSuccess = state.recentResults.find((r) => r.success);
+  // Only show failure badge if the most recent result (not just any) failed
+  // AND it happened in the last 10 minutes (not stale)
   const lastResult = state.recentResults[0];
+  const showBadge = lastResult && Date.now() - lastResult.time < 10 * 60 * 1000;
 
   if (!state.isRunning) {
     return (
@@ -67,18 +71,25 @@ export function AutoPostIndicator({ state }: Props) {
         <span className="autopost-label">Auto-posting active</span>
         <span className="autopost-detail">
           <FiClock />
-          Next check: {formatTimeUntil(state.nextCheck)}
-          {state.lastPost && ` | Last post: ${formatTimeAgo(state.lastPost)}`}
+          Next: {formatTimeUntil(state.nextCheck)}
+          {state.lastPost ? ` | Posted: ${formatTimeAgo(state.lastPost)}` : ""}
         </span>
       </div>
-      {lastResult && (
+      {showBadge && lastResult && (
         <span
           className={`autopost-badge ${lastResult.success ? "success" : "error"}`}
           title={lastResult.error || `Posted to ${lastResult.platform}`}
         >
-          {lastResult.success
-            ? `${lastResult.platform}`
-            : `${lastResult.platform} failed`}
+          {lastResult.success ? (
+            <><FiCheck /> {lastResult.platform}</>
+          ) : (
+            `${lastResult.platform} retry`
+          )}
+        </span>
+      )}
+      {!showBadge && lastSuccess && (
+        <span className="autopost-badge success" title={`Last posted to ${lastSuccess.platform}`}>
+          <FiCheck /> {lastSuccess.platform}
         </span>
       )}
     </div>
