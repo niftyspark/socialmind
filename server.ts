@@ -34,6 +34,17 @@ async function loadEnv() {
 }
 
 async function handleApi(req: any, res: any) {
+  // For development, handle social API routes by returning a helpful error
+  // In production (Vercel), these are handled by the /api/social.ts file
+  if (req.url?.startsWith('/api/social')) {
+    res.writeHead(501, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ 
+      error: 'Social API requires compiled backend. Please deploy to Vercel or set up a proper dev environment.',
+      hint: 'For local testing, ensure COMPOSIO_API_KEY is set and use the Vercel CLI: vercel dev'
+    }));
+    return;
+  }
+
   if (req.url === '/api/auth' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => body += chunk);
