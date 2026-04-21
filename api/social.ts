@@ -7,18 +7,32 @@ import { query, queryOne, queryAll } from '../lib/db.js';
 import { verifyToken } from './auth.js';
 import crypto from 'crypto';
 
-const COMPOSIO_API_BASE = 'https://backend.composio.dev/api/v1';
+// Use v2 API (consistent with social-poster.ts)
+const COMPOSIO_API_BASE = 'https://backend.composio.dev/api/v2';
 const PLATFORMS = ['twitter', 'facebook', 'instagram'] as const;
 const INTEGRATION_MAP: Record<string, string> = { twitter: 'twitter', facebook: 'facebook', instagram: 'instagram' };
 
 async function composioRequest(path: string, options: RequestInit = {}) {
   const apiKey = process.env.COMPOSIO_API_KEY;
   if (!apiKey) throw new Error('COMPOSIO_API_KEY not configured');
-  const response = await fetch(`${COMPOSIO_API_BASE}${path}`, {
+  const fullUrl = `${COMPOSIO_API_BASE}${path}`;
+  console.log(`[Composio] ${options.method || 'GET'} ${fullUrl}`);
+  
+  const response = await fetch(fullUrl, {
     ...options, headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, ...options.headers },
   });
-  if (!response.ok) { const body = await response.text(); throw new Error(`Composio API error (${response.status}): ${body}`); }
-  return response.json();
+  
+  const body = await response.text();
+  if (!response.ok) {
+    console.error(`[Composio Error] ${response.status}: ${body}`);
+    throw new Error(`Composio API error (${response.status}): ${body}`);
+  }
+  
+  try {
+    return JSON.parse(body);
+  } catch {
+    return body;
+  }
 }
 
 function getUserId(req: VercelRequest): string | null {
@@ -43,8 +57,12 @@ async function handleConnect(req: VercelRequest, res: VercelResponse, userId: st
     redirectUri: redirectUrl, 
     data: {} 
   };
+  
+  console.log(`[Social Connect] Platform: ${platform}, User: ${userId}, Redirect: ${redirectUrl}`);
+  console.log(`[Social Connect] Payload:`, JSON.stringify(connectPayload));
 
   const connectRes = await composioRequest('/connectedAccounts', { method: 'POST', body: JSON.stringify(connectPayload) });
+  console.log(`[Social Connect] Response:`, connectRes);
   const authUrl = connectRes.redirectUrl || connectRes.connectionStatus?.redirectUrl || connectRes.url || null;
   const connectedAccountId = connectRes.connectedAccountId || connectRes.id || null;
   if (!authUrl) return res.status(500).json({ error: `Composio did not return an authorization URL for ${platform}` });
