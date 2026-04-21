@@ -1,4 +1,5 @@
 import type { AppSettings, ChatMessage, TokenUsage } from "../types/chat";
+import { v4 as uuidv4 } from "uuid";
 
 const API_BASE = "/api";
 
@@ -84,22 +85,23 @@ export async function chatCompletion(messages: ChatMessage[], settings: AppSetti
 // ============================================================
 
 export async function authGetNonce(): Promise<{ nonce: string }> {
-  const response = await fetch(`${API_BASE}/auth`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "nonce" }),
-  });
-  if (!response.ok) throw new Error("Failed to get nonce");
-  return response.json();
+  return { nonce: uuidv4() };
 }
 
-export async function authWalletLogin(address: string, signature: string, message: string, nonce: string) {
+export async function authGoogleLogin() {
+  // For local development without backend, auto-create mock user
+  if (import.meta.env.DEV) {
+    const mockUser = { id: "dev-user-" + Date.now(), email: "dev@local.test", name: "Dev User", createdAt: Date.now() };
+    localStorage.setItem("socialmind-token", "dev-token-" + Date.now());
+    return { token: "dev-token-" + Date.now(), user: mockUser };
+  }
+
   const response = await fetch(`${API_BASE}/auth`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "wallet", address, signature, message, nonce }),
+    body: JSON.stringify({ action: "google" }),
   });
-  if (!response.ok) { const err = await response.json(); throw new Error(err.error || "Wallet login failed"); }
+  if (!response.ok) { const err = await response.json(); throw new Error(err.error || "Google sign-in failed"); }
   return response.json();
 }
 
@@ -180,7 +182,23 @@ export async function triggerAutoPost(force = false, minIntervalMs = 1800000) {
 // Social API — consolidated: /api/social?action=connect|disconnect|status|callback
 // ============================================================
 
+const isDevMode = () => !window.location.port || window.location.port === "5173";
+
+const DEV_PLATFORMS = {
+  twitter: { connected: false },
+  facebook: { connected: false },
+  instagram: { connected: false },
+};
+
 export async function connectPlatform(platform: string) {
+  if (isDevMode()) {
+    return {
+      authUrl: `https://app.composio.dev/platform/connect/${platform}?dev=true`,
+      connectionId: `dev-${platform}-${Date.now()}`,
+      platform,
+    };
+  }
+
   const response = await fetch(`${API_BASE}/social?action=connect`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...getAuthHeaders() },
@@ -191,6 +209,10 @@ export async function connectPlatform(platform: string) {
 }
 
 export async function disconnectPlatform(platform: string) {
+  if (isDevMode()) {
+    return { success: true };
+  }
+
   const response = await fetch(`${API_BASE}/social?action=disconnect`, {
     method: "POST",
     headers: { "Content-Type": "application/json", ...getAuthHeaders() },
@@ -201,6 +223,10 @@ export async function disconnectPlatform(platform: string) {
 }
 
 export async function getSocialStatus(live = false) {
+  if (isDevMode()) {
+    return DEV_PLATFORMS;
+  }
+
   const url = live ? `${API_BASE}/social?action=status&live=true` : `${API_BASE}/social?action=status`;
   const response = await fetch(url, { headers: getAuthHeaders() });
   if (!response.ok) throw new Error("Failed to get social status");

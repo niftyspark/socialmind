@@ -47,7 +47,7 @@ export function SettingsPanel() {
             <h3>API Configuration</h3>
 
             <label className="settings-label">
-              4everland API Key
+              Groq API Key
               <div className="api-key-input">
                 <input
                   type={showKey ? "text" : "password"}
@@ -55,7 +55,7 @@ export function SettingsPanel() {
                   onChange={(e) =>
                     setLocalSettings({ ...localSettings, apiKey: e.target.value })
                   }
-                  placeholder="Enter your 4everland API key"
+                  placeholder="Enter your Groq API key"
                   className="settings-input"
                 />
                 <button
@@ -69,11 +69,11 @@ export function SettingsPanel() {
               <span className="settings-hint">
                 Get your API key from{" "}
                 <a
-                  href="https://dashboard.4everland.org"
+                  href="https://console.groq.com"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  4everland Dashboard
+                  Groq Console
                 </a>
               </span>
             </label>

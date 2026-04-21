@@ -1,16 +1,16 @@
 // ============================================================
-// SocialMind — AI Chat Proxy (hides 4everland API key)
+// SocialMind — AI Chat Proxy (uses Groq)
 // ============================================================
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const API_BASE = 'https://ai.api.4everland.org/api/v1';
+const API_BASE = 'https://api.groq.com/openai/v1';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const apiKey = process.env.FOUREVERLAND_API_KEY;
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
     return res.status(500).json({ error: 'Server API key not configured' });
   }
@@ -28,7 +28,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     const body = JSON.stringify({
-      model: model || 'anthropic/claude-sonnet-4',
+      model: model || 'llama-3.3-70b-versatile',
       messages,
       stream: stream ?? true,
       temperature: temperature ?? 1,
@@ -48,7 +48,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (stream !== false) {
-      // Stream SSE response through
       res.setHeader('Content-Type', 'text/event-stream');
       res.setHeader('Cache-Control', 'no-cache');
       res.setHeader('Connection', 'keep-alive');
@@ -67,12 +66,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           res.write(chunk);
         }
       } catch {
-        // Client disconnected
       } finally {
         res.end();
       }
     } else {
-      // Non-streaming response
       const data = await response.json();
       return res.status(200).json(data);
     }

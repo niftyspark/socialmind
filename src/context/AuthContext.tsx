@@ -6,15 +6,13 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import { authGetNonce, authWalletLogin, authGetMe } from "../utils/api";
-import { connectMetaMask, signMessage, onAccountsChanged } from "../lib/metamask";
+import { authGetMe } from "../utils/api";
 
 interface User {
   id: string;
   email: string;
   name: string;
   image?: string;
-  walletAddress?: string;
   createdAt: number;
 }
 
@@ -22,7 +20,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  connectWallet: () => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   logout: () => void;
   error: string | null;
   clearError: () => void;
@@ -36,7 +34,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Check for existing session
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
     if (token) {
@@ -49,47 +46,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Listen for MetaMask account switches — logout if account changes
   useEffect(() => {
-    const unsub = onAccountsChanged((accounts) => {
-      if (accounts.length === 0 || (user?.walletAddress && accounts[0]?.toLowerCase() !== user.walletAddress)) {
-        localStorage.removeItem(TOKEN_KEY);
-        setUser(null);
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "google-oauth-success") {
+        const { token, user: userData } = event.data;
+        localStorage.setItem(TOKEN_KEY, token);
+        setUser(userData);
+      } else if (event.data?.type === "google-oauth-error") {
+        setError(event.data.error || "Google sign-in failed");
       }
-    });
-    return unsub;
-  }, [user?.walletAddress]);
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
-  const connectWallet = useCallback(async () => {
+  const signInWithGoogle = useCallback(async () => {
     setError(null);
     try {
-      // 1. Connect MetaMask + switch to Base
-      const address = await connectMetaMask();
+      // Check if running in dev mode (no backend)
+      const isDev = !window.location.port || window.location.port === "5173";
 
-      // 2. Get a nonce from our backend
-      const { nonce } = await authGetNonce();
+      if (isDev) {
+        // For local dev without backend, create mock user
+        const devUser = { id: "dev-user-" + Date.now(), email: "dev@local.test", name: "Dev User", createdAt: Date.now() };
+        const devToken = "dev-token-" + Date.now();
+        localStorage.setItem(TOKEN_KEY, devToken);
+        setUser(devUser);
+        return;
+      }
 
-      // 3. Build the sign-in message
-      const message = [
-        "Sign in to SocialMind",
-        "",
-        `Wallet: ${address}`,
-        `Chain: Base (8453)`,
-        `Nonce: ${nonce}`,
-        `Issued At: ${new Date().toISOString()}`,
-      ].join("\n");
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "YOUR_CLIENT_ID";
+      const redirectUri = `${window.location.origin}/oauth/callback`;
+      const scope = "openid email profile";
+      const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scope)}&access_type=offline`;
 
-      // 4. Ask MetaMask to sign it
-      const signature = await signMessage(address, message);
+      const width = 500;
+      const height = 600;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+      const oauthWindow = window.open(authUrl, "google-oauth", `width=${width},height=${height},left=${left},top=${top}`);
 
-      // 5. Verify on backend + get JWT
-      const data = await authWalletLogin(address, signature, message, nonce);
-      localStorage.setItem(TOKEN_KEY, data.token);
-      setUser(data.user);
+      if (!oauthWindow) {
+        throw new Error("Popup blocked. Please allow popups for this site.");
+      }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Wallet connection failed";
-      // Don't show error if user rejected the request
-      if (!msg.includes("rejected") && !msg.includes("denied") && !msg.includes("User rejected")) {
+      const msg = err instanceof Error ? err.message : "Google sign-in failed";
+      if (!msg.includes("rejected") && !msg.includes("denied")) {
         setError(msg);
       }
       throw err;
@@ -109,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isLoading,
         isAuthenticated: !!user,
-        connectWallet,
+        signInWithGoogle,
         logout,
         error,
         clearError,

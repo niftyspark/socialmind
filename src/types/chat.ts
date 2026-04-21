@@ -42,8 +42,8 @@ export interface AppSettings {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  apiKey: "", // No longer needed client-side — backend proxies all requests
-  model: "anthropic/claude-sonnet-4",
+  apiKey: "",
+  model: "llama-3.3-70b-versatile",
   theme: "dark",
   temperature: 1,
   topP: 1,
@@ -54,15 +54,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
 };
 
 export const AVAILABLE_MODELS: ModelOption[] = [
-  { id: "anthropic/claude-opus-4.6", name: "Claude Opus 4.6", provider: "Anthropic" },
-  { id: "anthropic/claude-sonnet-4", name: "Claude Sonnet 4", provider: "Anthropic" },
-  { id: "openai/gpt-4o", name: "GPT-4o", provider: "OpenAI" },
-  { id: "openai/gpt-4o-mini", name: "GPT-4o Mini", provider: "OpenAI" },
-  { id: "openai/o3-mini", name: "o3 Mini", provider: "OpenAI" },
-  { id: "google/gemini-2.5-pro-preview", name: "Gemini 2.5 Pro", provider: "Google" },
-  { id: "google/gemini-2.5-flash-preview", name: "Gemini 2.5 Flash", provider: "Google" },
-  { id: "meta-llama/llama-4-maverick", name: "Llama 4 Maverick", provider: "Meta" },
-  { id: "deepseek/deepseek-r1", name: "DeepSeek R1", provider: "DeepSeek" },
-  { id: "deepseek/deepseek-chat-v3-0324", name: "DeepSeek V3", provider: "DeepSeek" },
-  { id: "mistralai/mistral-large-latest", name: "Mistral Large", provider: "Mistral" },
+  { id: "llama-3.3-70b-versatile", name: "Llama 3.3 70B", provider: "Groq" },
+  { id: "llama-3.1-70b-versatile", name: "Llama 3.1 70B", provider: "Groq" },
+  { id: "llama-3.1-8b-instant", name: "Llama 3.1 8B", provider: "Groq" },
+  { id: "mixtral-8x7b-32768", name: "Mixtral 8x7B", provider: "Groq" },
+  { id: "gemma2-9b-8192", name: "Gemma 2 9B", provider: "Groq" },
 ];

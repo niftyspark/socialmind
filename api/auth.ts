@@ -1,6 +1,6 @@
 // ============================================================
-// SocialMind — Auth API (Web3 wallet + SIWE)
-// Routes: POST /api/auth (wallet/nonce), GET /api/auth (me)
+// SocialMind — Auth API (Google OAuth)
+// Routes: POST /api/auth (google), GET /api/auth (me)
 // ============================================================
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { query, queryOne } from '../lib/db.js';
@@ -32,40 +32,7 @@ export function getUserId(req: VercelRequest): string | null {
   return verifyToken(authHeader.slice(7))?.userId || null;
 }
 
-/**
- * Verify an Ethereum signature (EIP-191 personal_sign).
- * Recovers the signer address from the message + signature.
- */
-function verifySignature(message: string, signature: string, expectedAddress: string): boolean {
-  try {
-    // Use Node.js crypto to verify EIP-191 personal_sign
-    // The message is prefixed with "\x19Ethereum Signed Message:\n" + length
-    const prefix = `\x19Ethereum Signed Message:\n${message.length}`;
-    const prefixedMsg = prefix + message;
-    const msgHash = crypto.createHash('sha3-256').update(prefixedMsg).digest();
-
-    // For proper ecrecover we need the viem library on the server
-    // But since we can't import ESM viem in Vercel's CJS serverless functions,
-    // we'll verify by checking the signature format and trusting the frontend's
-    // account connection (RainbowKit ensures the wallet is connected).
-    // The nonce prevents replay attacks.
-
-    // Basic validation: signature should be 65 bytes (130 hex chars + 0x prefix)
-    if (!signature || !signature.startsWith('0x') || signature.length !== 132) {
-      return false;
-    }
-
-    // The address is already verified by the wallet connection.
-    // The nonce prevents replay. This is secure for our use case.
-    void msgHash; // used for hash verification
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // GET /api/auth = get current user
   if (req.method === 'GET') {
     const userId = getUserId(req);
     if (!userId) return res.status(401).json({ error: 'No token provided' });
@@ -86,80 +53,76 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const { action } = req.body;
 
   try {
-    // ── Get nonce for SIWE ──
-    if (action === 'nonce') {
-      const nonce = crypto.randomBytes(32).toString('hex');
-      // Store nonce temporarily (expires in 5 min)
-      await query(
-        `CREATE TABLE IF NOT EXISTS auth_nonces (
-          nonce TEXT PRIMARY KEY,
-          created_at BIGINT NOT NULL
-        )`
-      );
-      // Clean old nonces
-      await query('DELETE FROM auth_nonces WHERE created_at < $1', [Date.now() - 5 * 60 * 1000]);
-      await query('INSERT INTO auth_nonces (nonce, created_at) VALUES ($1, $2)', [nonce, Date.now()]);
-      return res.status(200).json({ nonce });
-    }
+    if (action === 'google-code') {
+      const { code } = req.body;
 
-    // ── Wallet sign-in (SIWE) ──
-    if (action === 'wallet') {
-      const { address, signature, message, nonce } = req.body;
-
-      if (!address || !signature || !message || !nonce) {
-        return res.status(400).json({ error: 'address, signature, message, and nonce are required' });
+      if (!code) {
+        return res.status(400).json({ error: 'Authorization code required' });
       }
 
-      // Verify nonce exists and is not expired
-      const nonceRow = await queryOne<{ nonce: string; created_at: number }>(
-        'SELECT nonce, created_at FROM auth_nonces WHERE nonce = $1', [nonce]
-      );
-      if (!nonceRow) {
-        return res.status(401).json({ error: 'Invalid or expired nonce. Please try again.' });
-      }
-      if (Date.now() - Number(nonceRow.created_at) > 5 * 60 * 1000) {
-        await query('DELETE FROM auth_nonces WHERE nonce = $1', [nonce]);
-        return res.status(401).json({ error: 'Nonce expired. Please try again.' });
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      const redirectUri = process.env.NEXT_PUBLIC_APP_URL + '/oauth/callback';
+
+      if (!clientId || !clientSecret) {
+        return res.status(500).json({ error: 'Google OAuth not configured' });
       }
 
-      // Consume the nonce (one-time use)
-      await query('DELETE FROM auth_nonces WHERE nonce = $1', [nonce]);
+      const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          code,
+          client_id: clientId,
+          client_secret: clientSecret,
+          redirect_uri: redirectUri,
+          grant_type: 'authorization_code',
+        }),
+      });
 
-      // Verify the message contains the nonce (prevents tampering)
-      if (!message.includes(nonce)) {
-        return res.status(401).json({ error: 'Message does not contain the expected nonce' });
+      if (!tokenRes.ok) {
+        const err = await tokenRes.text();
+        console.error('Token exchange error:', err);
+        return res.status(401).json({ error: 'Failed to exchange code for token' });
       }
 
-      // Verify signature format
-      const walletAddress = address.toLowerCase();
-      if (!verifySignature(message, signature, walletAddress)) {
-        return res.status(401).json({ error: 'Invalid wallet signature' });
+      const tokens = await tokenRes.json();
+      const accessToken = tokens.access_token;
+
+      const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { 'Authorization': `Bearer ${accessToken}` },
+      });
+
+      if (!userRes.ok) {
+        return res.status(401).json({ error: 'Failed to get user info' });
       }
 
-      // Find or create user by wallet address
-      // Ensure the wallet_address column exists
-      await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS wallet_address TEXT UNIQUE`).catch(() => {});
+      const googleUser = await userRes.json();
+
+      if (!googleUser.email) {
+        return res.status(401).json({ error: 'Could not get email from Google' });
+      }
+
+      await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id TEXT UNIQUE`).catch(() => {});
 
       let user = await queryOne<{ id: string; email: string; name: string; image: string; created_at: number }>(
-        'SELECT id, email, name, image, created_at FROM users WHERE wallet_address = $1', [walletAddress]
+        'SELECT id, email, name, image, created_at FROM users WHERE google_id = $1', [googleUser.sub]
       );
 
       if (!user) {
-        // Create new user with wallet address
         const userId = crypto.randomUUID();
         const now = Date.now();
-        const shortAddr = `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`;
         await query(
-          'INSERT INTO users (id, email, name, image, wallet_address, auth_provider, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-          [userId, `${walletAddress}@wallet`, shortAddr, '', walletAddress, 'wallet', now]
+          'INSERT INTO users (id, email, name, image, google_id, auth_provider, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+          [userId, googleUser.email, googleUser.name || googleUser.email.split('@')[0], googleUser.picture || '', googleUser.sub, 'google', now]
         );
-        user = { id: userId, email: `${walletAddress}@wallet`, name: shortAddr, image: '', created_at: now };
+        user = { id: userId, email: googleUser.email, name: googleUser.name || googleUser.email.split('@')[0], image: googleUser.picture || '', created_at: now };
       }
 
-      return res.status(200).json({ token: generateToken(user.id), user: { ...user, walletAddress } });
+      return res.status(200).json({ token: generateToken(user.id), user: { ...user } });
     }
 
-    return res.status(400).json({ error: 'Invalid action. Use "nonce" or "wallet".' });
+    return res.status(400).json({ error: 'Invalid action. Use "google-code".' });
   } catch (error) {
     console.error('Auth error:', error);
     return res.status(500).json({ error: 'Internal server error' });

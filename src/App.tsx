@@ -5,10 +5,11 @@ import { LoginPage } from "./components/auth/LoginPage";
 import { SetupWizard } from "./components/SetupWizard";
 import { Dashboard } from "./components/Dashboard";
 import { LandingPage } from "./components/landing/LandingPage";
+import { OAuthCallback } from "./pages/OAuthCallback";
 import { getAgentConfig } from "./utils/api";
 import type { AgentConfig } from "./types/agent";
 
-type AppView = "loading" | "landing" | "login" | "setup" | "dashboard";
+type AppView = "loading" | "landing" | "login" | "setup" | "dashboard" | "oauth-callback";
 
 function useHashRoute(): [string, (hash: string) => void] {
   const [hash, setHash] = useState(window.location.hash || "");
@@ -35,6 +36,11 @@ function AppRouter() {
   }, []);
 
   useEffect(() => {
+    if (window.location.pathname === "/oauth/callback") {
+      setView("oauth-callback");
+      return;
+    }
+
     const isAppRoute = hash === "#/app" || hash.startsWith("#/app");
 
     if (!isAppRoute) {
@@ -78,6 +84,8 @@ function AppRouter() {
   }, []);
 
   const handleEditAgent = useCallback(() => setView("setup"), []);
+
+  if (view === "oauth-callback") return <OAuthCallback />;
 
   if (view === "landing") return <LandingPage onEnterApp={handleEnterApp} />;
 

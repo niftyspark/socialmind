@@ -5,7 +5,7 @@
 
 import type { AgentConfig, Platform, ContentMixType } from '../src/types/agent.js';
 
-const API_BASE = 'https://ai.api.4everland.org/api/v1';
+const API_BASE = 'https://api.groq.com/openai/v1';
 
 interface GeneratedContent {
   text: string;
@@ -90,8 +90,8 @@ export async function generateContent(
   platform: Platform,
   contentType: ContentMixType,
 ): Promise<GeneratedContent> {
-  const apiKey = process.env.FOUREVERLAND_API_KEY;
-  if (!apiKey) throw new Error('FOUREVERLAND_API_KEY not configured');
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error('GROQ_API_KEY not configured');
 
   const maxLength = agent.rules.maxPostLength[platform];
   const systemPrompt = buildSystemPrompt(agent);
@@ -104,7 +104,7 @@ export async function generateContent(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'anthropic/claude-sonnet-4',
+      model: 'llama-3.3-70b-versatile',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -122,12 +122,10 @@ export async function generateContent(
   const data = await response.json();
   let text = data.choices?.[0]?.message?.content || '';
 
-  // Trim to max length if needed
   if (text.length > maxLength) {
     text = text.slice(0, maxLength - 3) + '...';
   }
 
-  // Extract hashtags
   const hashtagRegex = /#[\w]+/g;
   const hashtags = text.match(hashtagRegex) || [];
 
@@ -139,7 +137,6 @@ export async function generateContent(
   };
 }
 
-// Select a content type based on the agent's content mix weights
 export function selectContentType(
   weights: Record<ContentMixType, number>,
 ): ContentMixType {
