@@ -35,16 +35,14 @@ async function handleConnect(req: VercelRequest, res: VercelResponse, userId: st
   if (!process.env.COMPOSIO_API_KEY) return res.status(500).json({ error: 'Composio API key not configured' });
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  let integrationId: string | null = null;
-  try {
-    const integrationsRes = await composioRequest(`/integrations?appName=${INTEGRATION_MAP[platform]}`);
-    const items = integrationsRes.items || integrationsRes;
-    if (Array.isArray(items) && items.length > 0) integrationId = items[0].id;
-  } catch { /* fallback */ }
-
   const redirectUrl = `${appUrl}/api/social?action=callback&platform=${platform}&userId=${userId}`;
-  const connectPayload: Record<string, unknown> = { integrationId: integrationId || undefined, userUuid: userId, redirectUri: redirectUrl, data: {} };
-  if (!integrationId) connectPayload.appName = INTEGRATION_MAP[platform];
+  
+  const connectPayload: Record<string, unknown> = { 
+    appName: INTEGRATION_MAP[platform],
+    userUuid: userId, 
+    redirectUri: redirectUrl, 
+    data: {} 
+  };
 
   const connectRes = await composioRequest('/connectedAccounts', { method: 'POST', body: JSON.stringify(connectPayload) });
   const authUrl = connectRes.redirectUrl || connectRes.connectionStatus?.redirectUrl || connectRes.url || null;

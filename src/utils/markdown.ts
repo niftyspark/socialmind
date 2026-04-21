@@ -1,52 +1,40 @@
-import { marked } from "marked";
+import { marked, Renderer } from "marked";
 import DOMPurify from "dompurify";
 
-// Configure marked with GFM and breaks
 marked.setOptions({
   gfm: true,
   breaks: true,
 });
 
-// Custom renderer for code blocks
-const renderer = new marked.Renderer();
+const renderer = new Renderer();
 
-renderer.code = function ({ text, lang }: { text: string; lang?: string }) {
+renderer.code = function (code: string, lang?: string) {
   const language = lang || "";
   const displayLang = language || "text";
-  const escapedCode = escapeHtml(text);
+  const escapedCode = escapeHtml(code);
 
-  // For JSON, auto-collapse if large
-  if (language === "json" && text.length > 500) {
-    const lineCount = text.split("\n").length;
+  if (language === "json" && code.length > 500) {
+    const lineCount = code.split("\n").length;
     return `<details class="code-block-collapsible">
       <summary class="code-header"><span class="code-lang">${displayLang}</span><span class="code-lines">${lineCount} lines</span></summary>
       <div class="code-block"><pre><code class="language-${language}">${escapedCode}</code></pre>
-      <button class="copy-code-btn" data-code="${escapeAttr(text)}">Copy</button></div>
+      <button class="copy-code-btn" data-code="${escapeAttr(code)}">Copy</button></div>
     </details>`;
   }
 
   return `<div class="code-block">
-    <div class="code-header"><span class="code-lang">${displayLang}</span><button class="copy-code-btn" data-code="${escapeAttr(text)}">Copy</button></div>
+    <div class="code-header"><span class="code-lang">${displayLang}</span><button class="copy-code-btn" data-code="${escapeAttr(code)}">Copy</button></div>
     <pre><code class="language-${language}">${escapedCode}</code></pre>
   </div>`;
 };
 
-renderer.link = function ({
-  href,
-  title,
-  text,
-}: {
-  href: string;
-  title?: string | null;
-  text: string;
-}) {
+renderer.link = function (href: string, title: string | null | undefined, text: string) {
   const titleAttr = title ? ` title="${escapeAttr(title)}"` : "";
   return `<a href="${escapeAttr(href)}"${titleAttr} target="_blank" rel="noopener noreferrer">${text}</a>`;
 };
 
 marked.use({ renderer });
 
-// Simple HTML escape
 function escapeHtml(str: string): string {
   return str
     .replace(/&/g, "&amp;")
@@ -60,21 +48,18 @@ function escapeAttr(str: string): string {
   return str.replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// LRU cache for parsed markdown
 const cache = new Map<string, string>();
 const CACHE_MAX = 200;
 
 export function renderMarkdown(text: string): string {
   if (!text) return "";
 
-  // Truncate very long content
   const MAX_CHARS = 140_000;
   let content = text;
   if (content.length > MAX_CHARS) {
     content = content.slice(0, MAX_CHARS) + "\n\n---\n*Content truncated*";
   }
 
-  // Check cache
   const cached = cache.get(content);
   if (cached) return cached;
 
@@ -85,7 +70,6 @@ export function renderMarkdown(text: string): string {
       ADD_TAGS: ["details", "summary"],
     });
 
-    // Manage cache size
     if (cache.size >= CACHE_MAX) {
       const firstKey = cache.keys().next().value;
       if (firstKey) cache.delete(firstKey);
@@ -100,7 +84,6 @@ export function renderMarkdown(text: string): string {
 
 export function copyCodeToClipboard(code: string) {
   navigator.clipboard.writeText(code).catch(() => {
-    // Fallback for older browsers
     const el = document.createElement("textarea");
     el.value = code;
     el.style.position = "fixed";
